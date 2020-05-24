@@ -1,13 +1,5 @@
-import sys, math, enum, misc
-
-
-
-
-#inputs: all square contents
-#outputs: board number, square number
-#activation function: 
-#
-#fitness function: 
+import  math, copy, square, random, time, sys, color, datetime
+from progress.bar import ChargingBar
 
 
 
@@ -15,85 +7,220 @@ import sys, math, enum, misc
 
 
 
-class eval:
-    """Evaluation Function."""
-    
-    weight = [.1,.1,.1,.1,.1,.1]
 
-    def saveWeights():
-        f = open("data/eval.txt", 'w')
-        for i in eval.weight:
-            f.write(str(i)+"\n")
-        f.close()
+
+
+
+
+class traditional:
+
+
+    def __init__(self, weights=None, verbose=False):
+        if (weights==None):
+            self.weights = traditional.loadWeights()
+        else:
+            self.weights = weights
+        self.verbose = verbose
+
     def loadWeights():
-        f = open("data/eval.txt", 'r')
-        dummy = 0
+        final = []
+        f = open("data/weight.txt", 'r')
         for line in f:
-            eval.weight[dummy] = float(line)
-            dummy += 1
+            final.append(float(line))
         f.close()
+        return final
+    def updateWeights(values):
+        """Save new weights and archive old ones"""
+        f = open("data/old/"+str(datetime.datetime.now())+".txt", 'w+')
+        for line in traditional.loadWeights():
+            f.write(str(line)+"\n")
+        f.close()
+        f = open("data/weight.txt", 'w')
+        for line in values:
+            f.write(str(line)+"\n")
+        f.close()
+    def choose(self, game, depth=5, turbo=False):
+        """Chooses the best move"""
+        startTime = datetime.datetime.now()
 
 
+        currentBest = [-1,-1,-1,-1,-2.0]
+        if (game.player == square.square.o):
+            currentBest[4] = 2.0
 
+        if (self.verbose):
+            print("Choosing move from ", end="")
+            numOfMoves = len(game.getAllPossibleMoves())
+            if (numOfMoves < 5):
+                color.printColor(str(numOfMoves), 32, end="")
+            elif (numOfMoves < 10):
+                color.printColor(str(numOfMoves), 33, end="")
+            else:
+                color.printColor(str(numOfMoves), 31, end="")
+            print(" possible options, depth of "+str(depth))
+            bar = ChargingBar("Thinking", suffix='%(percent)d%%', max=len(game.getAllPossibleMoves()))
+            bar.next()
 
-
-
-
-
-
-    def evaluate(boards):
-        """ Eval a position, return a number from -1 to 1, negative are good for o, positive for x """
-        #parameters: number of completed boards, center control, almost completed boards, squares on x, squares on +, connected super boards
-        sumX = [0,0,0,0,0,0]
-        sumO = [0,0,0,0,0,0]
-
-        lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
-        for i in boards:
-            #print(str(i.values))
-            if (i.winner == misc.square.x):
-                sumX[0] += 1
-            elif (i.winner == misc.square.o):
-                sumO[0] += 1
-
-
-
+        for move in game.getAllPossibleMoves():
             
-            if (i.almostDone(misc.square.x)):
-                sumX[2] += 1
-            if (i.almostDone(misc.square.o)):
-                sumO[2] += 1
-        if (boards[4].winner == misc.square.none):
-            for j in boards[4].values:
-                if (j == misc.square.x):
-                    sumX[1] += 1
-                elif (j == misc.square.o):
-                    sumO[1] += 1
-        for i in [boards[0], boards[2], boards[6], boards[8]]:
-            for j in i.values:
-                if (j == misc.square.x):
-                    sumX[3] += 1
-                elif (j == misc.square.o):
-                    sumO[3] += 1
-        for i in [boards[1], boards[3], boards[5], boards[7]]:
-            for j in i.values:
-                if (j == misc.square.x):
-                    sumX[4] += 1
-                elif (j == misc.square.o):
-                    sumO[4] += 1
+            tempGame = copy.deepcopy(game)
+            tempGame.place(move[0],move[1],move[2],move[3])
+            score = self.tree(tempGame, 0, depth)
+            if (game.player == square.square.x and score > currentBest[4]):
+                currentBest = [move[0], move[1], move[2], move[3], score]
+                if (score == 1.0):
+                    break
+            if (game.player == square.square.o and score < currentBest[4]):
+                currentBest = [move[0], move[1], move[2], move[3], score]
+                if (score == -1.0):
+                    break
+            if (self.verbose):
+                bar.next()
+                #print("Score for "+str(move)+" is "+str(score)+" ---------")
+                
 
-        for i in lines:
-            if (((boards[i[0]] == boards[i[1]] and boards[i[0]].winner == misc.square.x and board[i[1]].winner == misc.square.x) or (boards[i[0]] == boards[i[2]] and boards[i[0]].winner == misc.square.x and boards[i[2]].winner == misc.square.x) or (boards[i[1]] == boards[i[2]] and boards[i[1]].winner == misc.square.x and boards[i[2]].winner == misc.square.x))):
-                sumX[5] += 1
-            if (((boards[i[0]] == boards[i[1]] and boards[i[0]].winner == misc.square.o and board[i[1]].winner == misc.square.o) or (boards[i[0]] == boards[i[2]] and boards[i[0]].winner == misc.square.o and boards[i[2]].winner == misc.square.o) or (boards[i[1]] == boards[i[2]] and boards[i[1]].winner == misc.square.o and boards[i[2]].winner == misc.square.o))):
-                sumO[5] += 1
+        if (self.verbose):
+            bar.finish()
+            print("Selected the move "+str(currentBest[0:4])+" which had a score of ", end="")
+            dummy = (currentBest[4])
+            if (dummy == 1.0):
+                color.printColor(str(dummy), "0;37;42")
+            elif (dummy > 0):
+                color.printColor(str(dummy), 32)
+            elif (dummy == 0):
+                print(str(dummy))
+            elif (dummy > -1.0):
+                color.printColor(str(dummy), 31)
+            else:
+                color.printColor(str(dummy), "0;37;41")
+            color.printColor("Total time: ", "1;37;40", end="")
+            print(str((datetime.datetime.now()-startTime).seconds)+" seconds ", end="")
+            color.printColor("Average time per move: ", "1;37;40", end="")
+            print(str((datetime.datetime.now()-startTime).seconds/float(len(game.getAllPossibleMoves())))+" seconds ", end="\n")
+
+        #time.sleep(1)               
+        return currentBest
+                    
+    def tree(self, game, curDepth, depth, alpha=-99, beta=99):
+        """Builds a game tree to search for the optimal move. 
+        curDepth gets incremented with each level of the tree
+        alpha and beta should start at their defualt values but get updated with recursed
+        """
+        
+        tempEval = history.getGame(game, curDepth)
+        if (tempEval != None):
+            print("Check: "+str(tempEval))
+            return tempEval
+
+        if (curDepth >= depth or game.isCompleted() != None):
+            score = self.eval(game)
+            history(game, curDepth, score) #log the completed eval in history
+            return score
+
+        if (game.player == square.square.x): #(looking for maximum score value)
+            current = -99
+            for move in game.getAllPossibleMoves():
+                tempGame = copy.deepcopy(game)
+                tempGame.place(move[0],move[1],move[2],move[3]) #WORKING ON THIS
+                score = self.tree(tempGame, curDepth + 1, depth, alpha=alpha, beta=beta)
+                current = max(score, current)
+                alpha = max(alpha, current)
+                if (alpha >= beta):
+                    break
+            
+            history(game, curDepth, current) #log the completed eval in history
+            return current
+        elif (game.player == square.square.o): #looking for minimum value
+            current = 99
+            for move in game.getAllPossibleMoves():
+                tempGame = copy.deepcopy(game)
+                tempGame.place(move[0],move[1],move[2],move[3]) #WORKING ON THIS
+                score = self.tree(tempGame, curDepth + 1, depth, alpha=alpha, beta=beta)
+                current = min(score, current)
+                beta = min(beta, current)
+                if (alpha >= beta):
+                    break
+            
+            history(game, curDepth, current) #log the completed eval in history
+            return current
+        return 0.0
+        
 
 
 
-        print(str(sumX)+", "+str(sumO))
-        totalX = (eval.weight[0]*sumX[0]) + (eval.weight[1]*sumX[1]) + (eval.weight[2]*sumX[2]) + (eval.weight[3]*sumX[3]) + (eval.weight[4]*sumX[4]) + (eval.weight[5]*sumX[5])
-        totalO = (eval.weight[0]*sumO[0]) + (eval.weight[1]*sumO[1]) + (eval.weight[2]*sumO[2]) + (eval.weight[3]*sumO[3]) + (eval.weight[4]*sumO[4]) + (eval.weight[5]*sumX[5])
+    def eval(self, game):
+        """Examine a board, return a number on who is winning
+        
+        Criteria:
+        1) number of squares in centered board
+        2) number of squares in the outside boards
+        3) number of squares in corner boards
+        4) number of completed boards in center
+        5) completed boards in corners
+        6) completed boards in sides
+        7) number of almost completed boards
+        8) adjacent completed boards
+        9) number of squares in center
+        10) number of squares on sides
+        11) number of squares on corners
+        """
 
-        return math.tanh((totalX)-(totalO))
+        if (game.isCompleted() == square.square.x):
+            return 1.0
+        if (game.isCompleted() == square.square.o):
+            return -1.0
+        if (game.isCompleted() == square.square.draw):
+            return 0.0
+
+        finalX = [0,0,0,0,0,0,0,0,0,0,0]
+        finalO = [0,0,0,0,0,0,0,0,0,0,0]
+
+        totalX = 0
+        totalO = 0
+
+        finalX[0] = game.boards[1][1].num(square.square.x)
+        finalO[0] = game.boards[1][1].num(square.square.o)
+
+        finalX[1] = game.boards[0][1].num(square.square.x) + game.boards[1][0].num(square.square.x) + game.boards[2][1].num(square.square.x) + game.boards[1][2].num(square.square.x)
+        finalO[1] = game.boards[0][1].num(square.square.o) + game.boards[1][0].num(square.square.o) + game.boards[2][1].num(square.square.o) + game.boards[1][2].num(square.square.o)
+
+        finalX[2] = game.boards[0][0].num(square.square.x) + game.boards[2][2].num(square.square.x) + game.boards[2][0].num(square.square.x) + game.boards[0][2].num(square.square.x)
+        finalO[2] = game.boards[0][0].num(square.square.o) + game.boards[2][2].num(square.square.o) + game.boards[2][0].num(square.square.o) + game.boards[0][2].num(square.square.o)
+        
+        finalX[3] = game.numCenterCompleted(square.square.x)
+        finalO[3] = game.numCenterCompleted(square.square.o)
+
+        finalX[4] = game.numCornerCompleted(square.square.x)
+        finalO[4] = game.numCornerCompleted(square.square.o)
+
+        finalX[5] = game.numSideCompleted(square.square.x)
+        finalO[5] = game.numSideCompleted(square.square.o)
+
+
+        finalX[6] = game.numAlmostCompleted(square.square.x)
+        finalO[6] = game.numAlmostCompleted(square.square.o)
+
+        if (game.almostCompleted(square.square.x)):
+            finalX[7] = 1
+        if (game.almostCompleted(square.square.o)):
+            finalO[7] = 1
+
+        finalX[8] = game.squaresOnCenter(square.square.x)
+        finalO[8] = game.squaresOnCenter(square.square.o)
+
+        finalX[9] = game.squaresOnSide(square.square.x)
+        finalO[9] = game.squaresOnSide(square.square.o)
+
+        finalX[10] = game.squaresOnCorner(square.square.x)
+        finalO[10] = game.squaresOnCorner(square.square.o)
+
+
+        for i in range(0,len(finalX)):
+            totalX += finalX[i] * self.weights[i]
+            totalO += finalO[i] * self.weights[i]
+
+        return math.tanh(totalX-totalO)
+        
 
 
 
@@ -101,7 +228,28 @@ class eval:
 
 
 
+class history:
+    """Tracks previous made node evaluations, so that if an identical node comes up it can reuse the found values."""
 
+    all = []
+    MAX = 10000 #max size of all
 
+    def __init__(self, game, depth, value):
+        #print("Creating history object. Values: "+str(depth)+", "+str(value))
+        self.game = game #the evaluated position
+        self.depth = depth #the depth it was evaluated at
+        self.value = value #the result float, -1 to 1
+        if (self.depth > 1):
+            history.all.append(self)
+            if (len(history.all) > history.MAX):
+                history.all.pop(0)
 
-
+    def getGame(game, depth):
+        """If all contains a matching game with depth greater then or equal to the provided depth, return the value. Otherwise, return None.
+        Refer to the __eq__ of the game class for equality tests"""
+        
+        for i in history.all:
+            if (game == i.game):
+                #print("Using found history: "+str(i.value))
+                return i.value
+        return None
