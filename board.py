@@ -1,70 +1,72 @@
-import square, color
-
+import square, misc
 
 
 
 class board:
-    lines = [[[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]], [[0,0],[1,0],[2,0]], [[0,1],[1,1],[2,1]], [[0,2],[1,2],[2,2]], [[0,0],[1,1],[2,2]], [[2,0],[1,1],[0,2]]]
-    inactiveColor = 0
-    activeColor = 31
-    finishedColor = "0;34;40"
-    lastColor = "0;36;40"
+    """Objects representing a board, containing squares
+    indexes:
+    0 1 2
+    3 4 5
+    6 7 8
+    """
+    lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]] #all lines on the board (left to right, up to down, diagnals)
+
+
+
+
 
     def __init__(self):
-        self.squares = [[square.square.none,square.square.none,square.square.none],[square.square.none,square.square.none,square.square.none],[square.square.none,square.square.none,square.square.none]]
+        """Initialize a board
+        squares: all 9 squares of the board, starting at the top left and ending at the bottom right, start off empty
+        winner: if the board is completed, this is the winner of the board.
+        active: if the board can be played on for that turn
+        """
+        self.squares = [square.square.none, square.square.none, square.square.none, square.square.none, square.square.none, square.square.none, square.square.none, square.square.none, square.square.none]
         self.winner = square.square.none
         self.active = True
-        self.verbose = False
-    
-  
-    def place(self, tile, x, y):
-        if (self.squares[x][y] == square.square.none and self.winner == square.square.none and self.winner == square.square.none and self.active):
-            self.squares[x][y] = tile
+
+    def place(self, tile, x):
+        """Place a tile on the board. Returns true or false if it works or not"""
+        if (self.squares[x] == square.square.none and self.winner == square.square.none and self.active):
+            self.squares[x] = tile
             self.update()
             return True
-        else:
-            return False
+        return False
 
     def update(self):
-        if (not self.isCompleted() and self.isFull()):
+        """Refresh a board to check for winners"""
+        if (self.isFull()):
             self.winner = square.square.draw
             self.active = False
-            if (self.verbose):
-                print("Board full")
+        elif (self.isCompleted() != square.square.none):
+            self.winner = self.isCompleted()
+            self.active = False
 
-    def num(self, dummy):
+    def numOfTile(self, tile):
+        """Check the number of a certain tile on the board"""
         total = 0
         for i in self.squares:
-            for j in i:
-                if (j == dummy):
-                    total += 1
+            if (i == tile):
+                total += 1
         return total
-    def almostCompleted(self, dummy):
-        for i in board.lines:
-            
 
-            if (  (self.squares[i[0][0]][i[0][1]] == square.square.none and self.squares[i[1][0]][i[1][1]] == dummy and self.squares[i[2][0]][i[2][1]] == dummy) or (self.squares[i[1][0]][i[1][1]] == square.square.none and self.squares[i[0][0]][i[0][1]] == dummy and self.squares[i[2][0]][i[2][1]] == dummy) or (self.squares[i[2][0]][i[2][1]] == square.square.none and self.squares[i[0][0]][i[0][1]] == dummy and self.squares[i[1][0]][i[1][1]] == dummy) ):
+    def almostCompleted(self, tile):
+        """Check if a board is one tile away from being completed by a certain tile"""
+        for i in board.lines:
+            if ((self.squares[i[0]] == square.square.none and self.squares[i[1]] == tile and self.squares[i[2]] == tile) or (self.squares[i[0]] == tile and self.squares[i[1]] == square.square.none and self.squares[i[2]] == tile) or (self.squares[i[0]] == tile and self.squares[i[1]] == tile and self.squares[i[2]] == square.square.none)):
                 return True
         return False
-                
 
     def isCompleted(self):
+        """Checks if a board is completed (3 in a row), returns the winner (or none)"""
         for i in board.lines:
-            if (self.squares[i[0][0]][i[0][1]] == self.squares[i[1][0]][i[1][1]] and self.squares[i[2][0]][i[2][1]] == self.squares[i[1][0]][i[1][1]] and (self.squares[i[0][0]][i[0][1]] == square.square.x or self.squares[i[0][0]][i[0][1]] == square.square.o)):
-                self.winner = self.squares[i[0][0]][i[0][1]]
-                self.active = False
-                if (self.verbose):
-                    print("Board completed as "+self.squares[i[0][0]][i[0][1]].value)
-                return True
-        return False
+            if (self.squares[i[0]] == self.squares[i[1]] and self.squares[i[1]] == self.squares[i[2]] and (self.squares[i[0]] == square.square.x or self.squares[i[0]] == square.square.o)):
+                return self.squares[i[0]]
+        return square.square.none
 
     def isFull(self):
+        """Returns true if the board is full"""
         for i in self.squares:
-            for j in i:
-                if (j == square.square.none):
-                    return False
+            if (i == square.square.none):
+                return False
         return True
-
-  
-  
-  

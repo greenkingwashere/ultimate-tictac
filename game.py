@@ -1,319 +1,276 @@
-import sys, random, time, os, datetime
-import square
-import board
-import color
-import learning
+import sys, random, time, os, datetime, square, board, misc, learning
+
+
+
+
+
+
+
+
 
 
 class game:
-    key = {0:[0,0],1:[0,1],2:[0,2],3:[1,0],4:[1,1],5:[1,2],6:[2,0],7:[2,1],8:[2,2]}
-    
-    def __init__(self, verbose=False):
-        self.boards = [[board.board(),board.board(),board.board()],[board.board(),board.board(),board.board()],[board.board(),board.board(),board.board()]]
-        self.turn = 1
-        self.player = square.square.x
-        self.verbose = verbose
-        self.prev = None
-  
+    """A game object. Contains the 9 boards and other attributes associated with a game.
+    Also contains the functions required to play the game to supplement the helper function in board.py"""
+
+
+    def __init__(self):
+        """Game object"""
+        self.boards = [board.board(), board.board(), board.board(), board.board(), board.board(), board.board(), board.board(), board.board(), board.board()]
+        self.turn = 1 #cosmetic move count 
+        self.player = square.square.x #current player to move, starts on X
+        self.prev = None #previous move, used when printing the board.
+
     def __eq__(self, other):
-        """Overrides the == for this object, used for ignoring useless attributes when comparing games that would otherwise be identical"""
+        """Overrides default ==. Ignores irrelevent attributes when comparing games"""
         if (self.boards == other.boards and self.player == other.player):
             return True
         return False
 
     def __str__(self):
-        final = "\n"
+        """Print the boards for str(self)"""
+        final = ""
+
+        key = {0:[0,1,2],1:[3,4,5],2:[6,7,8]}
         for i in range(0,3):
             for j in range(0,3):
-                for l in range(0,3):
-                    for k in range(0,3):
-                        
-                        if (self.prev != None and self.prev == [i,l,j,k]):
-                            
-                            final += "\033["+str(board.board.lastColor)+"m "+self.boards[i][l].squares[j][k].value+"\033[00m "
-                        elif (self.boards[i][l].active):
-                            final += "\033["+str(board.board.activeColor)+"m "+self.boards[i][l].squares[j][k].value+"\033[00m "
-                        elif (self.boards[i][l].winner != square.square.none):
-                            final += "\033["+str(board.board.finishedColor)+"m "+self.boards[i][l].squares[j][k].value+"\033[00m "
-                        #elif (i[l].almostCompleted(square.square.x) or i[l].almostCompleted(square.square.o)):
-                            #final += "\033["+str(33)+"m "+i[l].squares[j][k].value+"\033[00m "
+                for k in range(0,3):
+                    for l in range(0,3):
+                        if (self.prev == [key[i][k], key[j][l]]):
+                            final += "\033[34m "+self.boards[key[i][k]].squares[key[j][l]].value+"\033[00m"
+                        elif (self.boards[key[i][k]].active):
+                            final += "\033[36m "+self.boards[key[i][k]].squares[key[j][l]].value+"\033[00m"
+                        elif (self.boards[key[i][k]].winner == square.square.x):
+                            final += "\033[32m "+self.boards[key[i][k]].squares[key[j][l]].value+"\033[00m"
+                        elif (self.boards[key[i][k]].winner == square.square.o):
+                            final += "\033[31m "+self.boards[key[i][k]].squares[key[j][l]].value+"\033[00m"
+                        elif (self.boards[key[i][k]].winner == square.square.draw):
+                            final += "\033[33m "+self.boards[key[i][k]].squares[key[j][l]].value+"\033[00m"
                         else:
-                            final += "\033["+str(board.board.inactiveColor)+"m "+self.boards[i][l].squares[j][k].value+"\033[00m "
+                            final += " "+self.boards[key[i][k]].squares[key[j][l]].value
                     final += "\t"
                 final += "\n"
             final += "\n\n"
         return final
-    def switch(self):
-        if (self.player == square.square.x):
-            self.player = square.square.o
-        elif (self.player == square.square.o):
+
+    def switchPlayer(self):
+        """Switches players from x to o or vice versa"""
+        if (self.player == square.square.o):
             self.player = square.square.x
+        elif (self.player == square.square.x):
+            self.player = square.square.o
+
     def setAllInactive(self):
+        """Set all boards to inactive"""
         for i in self.boards:
-            for j in i:
-                j.active = False
+            i.active = False
+
     def setAllActive(self):
+        """Set all boards to active if not done"""
         for i in self.boards:
-            for j in i:
-                if (j.winner == square.square.none):
-                    j.active = True
-                else:
-                    j.active = False
-    def isFull(self):
-        for i in self.boards:
-            for j in i:
-                if (not j.isFull()):
-                    return False
-        return True
+            if (i.winner == square.square.none):
+                i.active = True
+
     def allCompleted(self):
+        """Returns true if all boards can't be played on"""
         for i in self.boards:
-            for j in i:
-                if (j.winner == square.square.none):
-                    return False
+            if (i.winner == square.square.none):
+                return False
         return True
-    def isCompleted(self):
+    
+    def isFull(self):
+        """Returns true if all boards are completly full"""
+        for i in self.boards:
+            if (not i.isFull()):
+                return False
+        return True
+
+    def isFinished(self):
+        """Returns the winner if there is one, otherwise returns none"""
         for i in board.board.lines:
-            if (self.boards[i[0][0]][i[0][1]].winner == self.boards[i[1][0]][i[1][1]].winner and self.boards[i[2][0]][i[2][1]].winner == self.boards[i[1][0]][i[1][1]].winner and (self.boards[i[0][0]][i[0][1]].winner == square.square.x or self.boards[i[0][0]][i[0][1]].winner == square.square.o)):
-                return self.boards[i[0][0]][i[0][1]].winner
+            if (self.boards[i[0]].winner == self.boards[i[1]].winner and self.boards[i[1]].winner == self.boards[i[2]].winner and self.boards[i[0]].winner != square.square.none and self.boards[i[0]].winner != square.square.draw):
+                return self.boards[i[0]].winner
         if (self.isFull() or self.allCompleted()):
             return square.square.draw
-        return None
-    def numCompleted(self, dummy):
-        total = 0
-        for i in self.boards:
-            for j in i:
-                if (j.winner == dummy):
-                    total += 1
-        return total
-    def numCenterCompleted(self, dummy):
-        if (self.boards[1][1].winner == dummy):
-            return 1
-        return 0
-    def numCornerCompleted(self, dummy):
-        total = 0
-        if (self.boards[0][0] == dummy):
-            total += 1
-        if (self.boards[2][0] == dummy):
-            total += 1
-        if (self.boards[0][2] == dummy):
-            total += 1
-        if (self.boards[2][2] == dummy):
-            total += 1
-        return total
-    def numSideCompleted(self, dummy):
-        total = 0
-        if (self.boards[1][0] == dummy):
-            total += 1
-        if (self.boards[0][1] == dummy):
-            total += 1
-        if (self.boards[1][2] == dummy):
-            total += 1
-        if (self.boards[2][1] == dummy):
-            total += 1
-        return total
+        return square.square.none
 
-    def numAlmostCompleted(self, dummy):
-        total = 0
-        for i in self.boards:
-            for j in i:
-                if (j.almostCompleted(dummy)):
-                    total += 1
-        return total
-    def almostCompleted(self, dummy):
-        for i in board.board.lines:
-            
-
-            if (  (self.boards[i[0][0]][i[0][1]].winner == square.square.none and self.boards[i[1][0]][i[1][1]].winner == dummy and self.boards[i[2][0]][i[2][1]].winner == dummy) or (self.boards[i[1][0]][i[1][1]].winner == square.square.none and self.boards[i[0][0]][i[0][1]].winner == dummy and self.boards[i[2][0]][i[2][1]].winner == dummy) or (self.boards[i[2][0]][i[2][1]].winner == square.square.none and self.boards[i[0][0]][i[0][1]].winner == dummy and self.boards[i[1][0]][i[1][1]].winner == dummy) ):
-                return True
-        return False
-    def total(self, dummy):
-        total = 0
-        for i in self.boards:
-            for j in i:
-                if (j.winner == square.square.none and not j.isFull()):
-                    total += j.num(dummy)
-        return total
-    def place(self, boardX, boardY, squareX, squareY):
-        if (self.boards[boardX][boardY].place(self.player, squareX, squareY)):
-            if (not self.boards[squareX][squareY].isFull() and self.boards[squareX][squareY].winner == square.square.none):
+    def place(self, boardX, squareX, verbose=False):
+        """Try to make a move, and sets up boards for next move"""
+        if (self.boards[boardX].place(self.player, squareX)):
+            if (not self.boards[squareX].isFull() and self.boards[squareX].winner == square.square.none):
                 self.setAllInactive()
-                self.boards[squareX][squareY].active = True
+                self.boards[squareX].active = True
             else:
-                self.setAllActive()
-            if (self.player == square.square.x):
+                self.setAllActive() #wildcard!!
+            if (self.player == square.square.o):
                 self.turn += 1
-            self.switch()
-            self.prev = [boardX, boardY, squareX, squareY]
+            self.switchPlayer()
+            self.prev = [boardX, squareX]
             return True
         return False
+
+
+
+    # ============= HELPER FUNCTIONS FOR AI BELOW ===================
+
     def getAllPossibleMoves(self):
+        """Returns a list of every legal move in the current position. Use len() to get number of legal moves"""
         final = []
-        for i in range(0,3):
-            for j in range(0,3):
-                for l in range(0,3):
-                    for k in range(0,3):
-                        if (self.boards[i][j].active and self.boards[i][j].squares[l][k] == square.square.none):
-                            final.append([i,j,l,k])
-        
+        for i in range(0,9):
+            for j in range(0,9):
+                if (self.boards[i].active and self.boards[i].squares[j] == square.square.none):
+                    final.append([i,j])
         return final
-    def squaresOnCenter(self, dummy):
-        """gets number of squares in center slots (not boards)"""
-        final = 0
+
+    def numCompleted(self, tile):
+        """Get number of completed boards by a certain player"""
+        total = 0
         for i in self.boards:
-            for j in i:
-                if (j.squares[1][1] == dummy):
-                    final += 1
-        return final
-    def squaresOnSide(self, dummy):
-        """gets number of squares in side slots (not boards)"""
-        final = 0
+            if (i.winner == tile):
+                total += 1
+        return total
+
+    def numCenterCompleted(self, tile):
+        """If the center board is completed by tile, return 1"""
+        if (self.boards[4].winner == tile):
+            return 1
+        return 0
+
+    def numCornerCompleted(self, tile):
+        """How many corner boards are won by tile"""
+        total = 0
+        for i in [0,2,6,8]:
+            if (self.boards[i].winner == tile):
+                total += 1
+        return total
+
+    def numSideCompleted(self, tile):
+        """How many side boards are won by tile"""
+        total = 0
+        for i in [1,3,5,7]:
+            if (self.boards[i].winner == tile):
+                total += 1
+        return total
+
+    def numAlmostCompleted(self, tile):
+        """Number of boards almost completed by a certain tile"""
+        total = 0
         for i in self.boards:
-            for j in i:
-                if (j.squares[0][1] == dummy):
-                    final += 1
-                if (j.squares[1][0] == dummy):
-                    final += 1
-                if (j.squares[2][1] == dummy):
-                    final += 1
-                if (j.squares[1][2] == dummy):
-                    final += 1
-        return final
-    def squaresOnCorner(self, dummy):
-        """gets number of squares in corner slots (not boards)"""
-        final = 0
+            if (i.almostCompleted(tile)):
+                total += 1
+        return total
+
+    def almostCompleted(self, tile):
+        """Returns true if the player has 2 in a row"""
+        for i in board.board.lines:
+            if ((self.boards[i[0]].winner == square.square.none and self.boards[i[1]].winner == tile and self.boards[i[2]].winner == tile) or (self.boards[i[0]].winner == tile and self.boards[i[1]].winner == square.square.none and self.boards[i[2]].winner == tile) or (self.boards[i[0]].winner == tile and self.boards[i[1]].winner == tile and self.boards[i[2]].winner == square.square.none)):
+                return True
+        return False
+    
+    def total(self, tile):
+        """Returns number of tiles on the board"""
+        total = 0
         for i in self.boards:
-            for j in i:
-                if (j.squares[2][2] == dummy):
-                    final += 1
-                if (j.squares[0][0] == dummy):
-                    final += 1
-                if (j.squares[2][0] == dummy):
-                    final += 1
-                if (j.squares[0][2] == dummy):
-                    final += 1
-        return final
+            if (i.winner == square.square.none and not i.isFull()):
+                total += i.numOfTile(tile)
+        return total
 
-    def start(self, agent1=None, agent2=None, depth=5, log=False):
-        """agents are players. If none they are humans. Otherwise they are machines"""
+    def squaresOnCenter(self, tile):
+        """Returns number of centered squares"""
+        total = 0
+        for i in self.boards:
+            if (i.squares[4] == tile):
+                total += 1
+        return total
+
+    def squaresOnCorners(self, tile):
+        """Returns number of corner squares"""
+        total = 0
+        for i in self.boards:
+            for j in [0,2,6,8]:
+                if (i.squares[j] == tile):
+                    total += 1
+        return total
+
+    def squaresOnSides(self, tile):
+        """Returns number of side squares"""
+        total = 0
+        for i in self.boards:
+            for j in [1,3,5,7]:
+                if (i.squares[j] == tile):
+                    total += 1
+        return total
+
+    # ============= END HELPERS ======================
 
 
-        if (log):
-            text = ""
 
-        if (self.verbose):
-            print("Starting game")
+
+    def start(self, agent1=None, agent2=None, verbose=True, debug=False):
+        """
+        Play a game. Agents are whatever is playing; none is a human and otherwise it is a learning object.
+        """
+
+
+        if (verbose):
+            print("Starting game.")
 
         try:
+
             while True:
+                if (verbose):
+                    os.system("clear") #clear the screen
+                    print(str(self))
+                    print("Turn "+str(self.turn)+"")
+                    if (agent1 != None):
+                        print("Eval: ", end="")
+                        misc.printEval(agent1.eval(self, debug=True))
+                    elif (agent2 != None):
+                        print("Eval: ", end="")
+                        misc.printEval(agent2.eval(self, debug=True))
+                    if (debug):
+                        print("Number of possible moves: "+str(len(self.getAllPossibleMoves())))
+                        print("Winners: ", end="")
+                        for i in self.boards:
+                            print(i.winner.value+", ", end="")
+                        print("")
+
 
                 while True:
-                    #time.sleep(1)
-                    if (self.verbose):
-                        os.system("clear")
-                        print(self)
-                        print("Turn: "+str(self.turn))
-                        print("History size in bytes: "+str(sys.getsizeof(learning.history.all)))
-                        if (agent1 != None):
-                            color.printColor("Eval: "+str(agent1.eval(self)), 33)
-                        elif (agent2 != None):
-                            color.printColor("Eval: "+str(agent2.eval(self)), 33)
-
-
-                    if (self.player == square.square.x and agent1 != None):
-                        #print("Entering agent1")
-                        try:
-                            attempt = agent1.choose(self, depth=depth)
-                            #print("AI Attempt: "+str(attempt))
-                            
-                        except KeyError:
-                            color.printColor("INVALID MOVE BY AGENT 1")
-                            continue
-
-                    elif (self.player == square.square.o and agent2 != None):
-                        try:
-                            attempt = agent2.choose(self, depth=depth)
-                            #print("AI Attempt: "+str(attempt))
-                            
-                        except KeyError:
-                            color.printColor("INVALID MOVE BY AGENT 2")
-                            continue
-                    else:
-                        if (self.verbose):
-                            print("Player "+self.player.value+"'s turn (board# square#): ",end="")
-                        ghost = input()
-
-                        if (len(ghost.split(' ')) == 2):
-                            try:
-                                boardNum = game.key[(int(ghost.split(' ')[0]) - 1)]
-                                squareNum = game.key[(int(ghost.split(' ')[1]) - 1)]
-
-
-                                attempt = [boardNum[0], boardNum[1], squareNum[0], squareNum[1]]
-
-                                #if (not self.boards[game.key[boardNum][0]][game.key[boardNum][1]].place(self.player, game.key[squareNum][0], game.key[squareNum][1])):
-                                    #raise ZeroDivisionError
-                            except KeyError:
-                                if (self.verbose):
-                                    print("Input error")
+                    try:
+                        if ((self.player == square.square.x and agent1 == None) or (self.player == square.square.o and agent2 == None)):
+                            if (verbose):
+                                print("Player "+self.player.value+"'s move (board# square#): ", end="", flush=True)
+                            rawinput = input()
+                            if (rawinput == "debug"):
+                                debug = not debug
                                 continue
-                    
-                           
-                    if (not self.place(attempt[0], attempt[1], attempt[2], attempt[3])):
-                        continue
-                        if (self.verbose):
-                            print("Error making move")
-                    
-                    
-
-                    
-                    if (log):
-                        text += "MOVE "+str(attempt[0])+" "+str(attempt[1])+" "+str(attempt[2])+" "+str(attempt[3])+": "
-                        if (self.player == square.square.x):
-                            #remember player is already switched
-                            text += "player o"
-                            if (agent2 != None):
-                                text += " cpu\n"
-                            else:
-                                text += " human\n"
+                            move = [int(rawinput.split(' ')[0]) - 1, int(rawinput.split(' ')[1]) - 1]
+                        elif (self.player == square.square.x): #agent1's move
+                            move = agent1.choose(self, depth=agent1.depth)
+                        elif (self.player == square.square.o): #agent2's move
+                            move = agent2.choose(self, depth=agent2.depth)
+                        if (self.place(move[0],move[1])):
+                            break
                         else:
-                            text += "player x"
-                            if (agent1 != None):
-                                text += " cpu\n"
-                            else:
-                                text += " human\n"
-                        
+                            raise IndexError
+                    except (IndexError, ValueError):
+                        misc.printColor("Invalid move")
+                if (self.isFinished() != square.square.none):
+                    if (verbose):
+                        if (self.isFinished() == square.square.draw):
+                            misc.printColor("Game ended as a draw", 34)
+                        else:
+                            misc.printColor("Player "+self.isFinished().value+" is victorious!", 32)
+                    return self.isFinished()
 
-                    
-                    if (self.isCompleted() != None):
-                        if (self.verbose):
-                            color.printColor(self.isCompleted().value + " player is victorious!", "0;30;42")
-                        if (log):
-                            if (self.isCompleted() != square.square.draw):
-                                text += "GAME OVER, player "+self.isCompleted().value+" wins\n"
-                            else:
-                                text += "GAME OVER, draw\n"
-                            f = open("games/"+str(datetime.datetime.now())+".txt", 'w+')
-                            f.write(text)
-                            f.close()
-                        return self.isCompleted()
-                
-                break 
+
 
         except KeyboardInterrupt:
-            if (self.verbose):
-                print("Exiting game")
-            if (log):
-                text += "Game interrupted"
-                f = open("games/"+str(datetime.datetime.now())+".txt", 'w+')
-                f.write(text)
-                f.close()
-
-
-
-
-
-
-
-
+            if (verbose):
+                misc.printColor("\nGame interrupted")
+        #except Exception as e:
+            #if (verbose):
+                #misc.printException(e)
 
 
