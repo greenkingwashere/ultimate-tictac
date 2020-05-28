@@ -11,6 +11,7 @@ if __name__ == "__main__":
         pass
     else:
         misc.printFile('logo.txt')
+        
         try:
             while True:
                 print("> ", end="", flush=True)
@@ -18,36 +19,29 @@ if __name__ == "__main__":
                 if (ghost == "pvp"):
                     tempGame = game.game()
                     tempGame.start()
-                elif (ghost == "pvc"):
+                elif (ghost == "pvc" or ghost == "cvp" or ghost == "cvc"):
                     print("Depth: ", end="", flush=True)
                     try:
                         depth = int(input())
                     except ValueError:
                         misc.printColor("Input Error")
                         continue
+                    print("History (y/n): ", end="", flush=True)
+                    try:
+                        history = {"y":True, "n":False}[input().lower()]
+                    except KeyError:
+                        misc.printColor("Input Error")
+                        continue
+
                     tempGame = game.game()
                     ai = learning.traditional(depth = depth)
-                    tempGame.start(agent2 = ai)
-                elif (ghost == "cvp"):
-                    print("Depth: ", end="", flush=True)
-                    try:
-                        depth = int(input())
-                    except ValueError:
-                        misc.printColor("Input Error")
-                        continue
-                    tempGame = game.game()
-                    ai = learning.traditional(depth=depth)
-                    tempGame.start(agent1 = ai)
-                elif (ghost == "cvc"):
-                    print("Depth: ", end="", flush=True)
-                    try:
-                        depth = int(input())
-                    except ValueError:
-                        misc.printColor("Input Error")
-                        continue
-                    tempGame = game.game()
-                    ai = learning.traditional(depth=depth)
-                    tempGame.start(agent2 = ai, agent1 = ai)
+                    if (ghost == "pvc"):
+                        tempGame.start(agent2 = ai, useHistory=history)
+                    elif (ghost == "cvp"):
+                        tempGame.start(agent1 = ai, useHistory=history)
+                    elif (ghost == "cvc"):
+                        tempGame.start(agent1 = ai, agent2=ai, useHistory=history)
+                
                 elif (ghost == "debug"):
                     tempGame = game.game()
                     tempGame.start(debug=True)

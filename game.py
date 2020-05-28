@@ -23,9 +23,13 @@ class game:
 
     def __eq__(self, other):
         """Overrides default ==. Ignores irrelevent attributes when comparing games"""
-        if (self.boards == other.boards and self.player == other.player):
-            return True
-        return False
+        for i in range(0,9):
+            for j in range(0,9):
+                if (self.boards[i].squares[j] != other.boards[i].squares[j]):
+                    return False
+        if (self.player != other.player):
+            return False
+        return True
 
     def __str__(self):
         """Print the boards for str(self)"""
@@ -206,7 +210,7 @@ class game:
 
 
 
-    def start(self, agent1=None, agent2=None, verbose=True, debug=False):
+    def start(self, agent1=None, agent2=None, verbose=True, debug=False, useHistory=True):
         """
         Play a game. Agents are whatever is playing; none is a human and otherwise it is a learning object.
         """
@@ -224,16 +228,16 @@ class game:
                     print("Turn "+str(self.turn)+"")
                     if (agent1 != None):
                         print("Eval: ", end="")
-                        misc.printEval(agent1.eval(self, debug=True))
+                        misc.printEval(agent1.eval(self, debug=debug))
                     elif (agent2 != None):
                         print("Eval: ", end="")
-                        misc.printEval(agent2.eval(self, debug=True))
+                        misc.printEval(agent2.eval(self, debug=debug))
                     if (debug):
                         print("Number of possible moves: "+str(len(self.getAllPossibleMoves())))
                         print("Winners: ", end="")
                         for i in self.boards:
                             print(i.winner.value+", ", end="")
-                        print("")
+                        print("\nhistory len: "+str(len(learning.history.all))+" bytes: "+str(sys.getsizeof(learning.history.all)))
 
 
                 while True:
@@ -247,9 +251,9 @@ class game:
                                 continue
                             move = [int(rawinput.split(' ')[0]) - 1, int(rawinput.split(' ')[1]) - 1]
                         elif (self.player == square.square.x): #agent1's move
-                            move = agent1.choose(self, depth=agent1.depth)
+                            move = agent1.choose(self, depth=agent1.depth, useHistory=useHistory)
                         elif (self.player == square.square.o): #agent2's move
-                            move = agent2.choose(self, depth=agent2.depth)
+                            move = agent2.choose(self, depth=agent2.depth, useHistory=useHistory)
                         if (self.place(move[0],move[1])):
                             break
                         else:

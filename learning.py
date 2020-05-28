@@ -33,7 +33,7 @@ class traditional:
 
 
 
-    def choose(self, game, depth=5, verbose=True, debug=False):
+    def choose(self, game, depth=5, verbose=True, debug=False, useHistory=True):
         """Chooses the best move by building a list of trees from each move."""
         starttime = datetime.datetime.now()
         currentBest = [-1,-1,-2.0]
@@ -48,7 +48,7 @@ class traditional:
         for move in game.getAllPossibleMoves():
             tempGame = copy.deepcopy(game)
             tempGame.place(move[0], move[1])
-            score = self.tree(tempGame, depth)
+            score = self.tree(tempGame, depth, useHistory=useHistory)
             if (game.player == square.square.x and score > currentBest[2]):
                 currentBest = [move[0], move[1], score]
                 if (score == 1.0):
@@ -69,32 +69,39 @@ class traditional:
 
 
 
-    def tree(self, game, depth=5, alpha=-99, beta=99):
+    def tree(self, game, depth=5, alpha=-99, beta=99, useHistory=True, debug=False):
         """Builds game tree to search for the best move"""
-
+        if (depth > 0 and useHistory):
+            ghost = history.get(game, depth)
+            if (ghost != None):
+                return ghost
         if (depth <= 0 or game.isFinished() != square.square.none):
             return self.eval(game)
-        if (game.player == square.square.x):
+        if (game.player == square.square.x): #maximizing player
             current = -99
             for move in game.getAllPossibleMoves():
                 tempGame = copy.deepcopy(game)
                 tempGame.place(move[0], move[1])
-                score = self.tree(tempGame, depth - 1, alpha=alpha, beta=beta)
+                score = self.tree(tempGame, depth - 1, alpha=alpha, beta=beta, debug=debug)
                 current = max(score, current)
                 alpha = max(alpha, current)
                 if (alpha >= beta):
                     break
+            if (useHistory and history.get(game, depth) == None):
+                history(game, depth, current)
             return current
-        if (game.player == square.square.o):
+        if (game.player == square.square.o): #minimizing player
             current = 99
             for move in game.getAllPossibleMoves():
                 tempGame = copy.deepcopy(game)
                 tempGame.place(move[0], move[1])
-                score = self.tree(tempGame, depth - 1, alpha=alpha, beta=beta)
+                score = self.tree(tempGame, depth - 1, alpha=alpha, beta=beta, debug=debug)
                 current = min(score, current)
                 beta = min(beta, current)
                 if (alpha >= beta):
                     break
+            if (useHistory and history.get(game, depth) == None):
+                history(game, depth, current)
             return current
 
 
@@ -217,3 +224,23 @@ class traditional:
         return math.tanh(totalX-totalO)
     
 
+class history:
+    """Contains a list of previously evaluated positions, to be accessed and used later."""
+
+    all = [] #list of all objects
+    MAX = 10000 #max amount in storage
+
+    def __init__(self, game, depth, value):
+        self.game = copy.deepcopy(game)
+        self.depth = depth
+        self.value = value
+        history.all.append(self)
+        if (len(history.all) > history.MAX):
+            history.all.pop(0)
+
+    def get(game, depth):
+        """Tries to find a game that was evaluated at the provided depth or greater, returns the eval or none"""
+        for i in history.all:
+            if (i.game == game and i.depth >= depth):
+                return i.value
+        return None
