@@ -251,9 +251,9 @@ class game:
                                 continue
                             move = [int(rawinput.split(' ')[0]) - 1, int(rawinput.split(' ')[1]) - 1]
                         elif (self.player == square.square.x): #agent1's move
-                            move = agent1.choose(self, depth=agent1.depth, useHistory=useHistory)
+                            move = agent1.choose(self, depth=agent1.depth, useHistory=useHistory, verbose=verbose)
                         elif (self.player == square.square.o): #agent2's move
-                            move = agent2.choose(self, depth=agent2.depth, useHistory=useHistory)
+                            move = agent2.choose(self, depth=agent2.depth, useHistory=useHistory, verbose=verbose)
                         if (self.place(move[0],move[1])):
                             break
                         else:
