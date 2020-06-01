@@ -1,4 +1,4 @@
-import math, copy, square, random, time, sys, misc, board, datetime
+import math, copy, square, random, time, sys, misc, board, datetime, threading, game
 from progress.bar import ChargingBar
 
 
@@ -222,7 +222,77 @@ class traditional:
 
 
         return math.tanh(totalX-totalO)
-    
+
+
+
+
+
+
+    def train(self, change=.01, max=None, verbose=True):
+        """Trains the weights. Opens a certain number of threads that all play games with the original weights versus a slight change."""
+        if (max == None):
+            max = len(self.weights)
+        threads = []
+        for i in range(0,max):
+            threads.append(None)
+
+        try:
+            
+            while True:
+                for i in threads:
+                    if (i == None or not i.isAlive()):
+                        if (verbose):
+                            print("Detected terminated thread. Opening...")
+                        
+                        i = threading.Thread(target=traditional.trainThread, args=(self, threads.index(i),change, self.depth, 1, verbose,))
+                        i.start()
+                    time.sleep(.1)
+
+                        
+
+        except KeyboardInterrupt:
+            #kill all threads
+            misc.printColor("\nStopping training", 33)
+            return
+
+
+    def trainThread(self, weightIndex, weightChange, depth, trial=1, verbose=True):
+        """This function is called when new threads are opened."""
+        oldIntel = traditional(depth=depth)
+        newIntel = traditional(depth=depth)
+        newIntel.weights[weightIndex] += weightChange #adjust weight
+
+
+        if (verbose):
+            misc.printColor("[weight#"+str(weightIndex)+"] Starting game 1 of trial #"+str(trial)+"", 32)
+            
+
+
+        tempGame = game.game()
+        victor1 = tempGame.start(agent1=oldIntel, agent2=newIntel, useHistory=False, verbose=False)
+
+        if (verbose):
+            print("[weight#"+str(weightIndex)+"] Game 2 of trial #"+str(trial))
+
+        tempGame = game.game()
+        victor2 = tempGame.start(agent1=newIntel, agent2=oldIntel, useHistory=False, verbose=False)
+
+        if (victor1 == square.square.o and victor2 == square.square.x):
+            if (verbose):
+                misc.printColor("[weight#"+str(weightIndex)+"] New AI won both", 32)
+                print("Updating weights")
+            return
+        if (victor1 == square.square.x and victor2 == square.square.o):
+            if (verbose):
+                misc.printColor("[weight#"+str(weightIndex)+"] New AI lost both", 31)
+            return
+        else:
+            if (verbose):
+                misc.printColor("[weight#"+str(weightIndex)+"] Winner game 1: "+{square.square.x:"oldAI", square.square.o:"newAI", square.square.draw:"draw"}[victor1]+", winner game 2: "+{square.square.x:"newAI", square.square.o:"oldAI", square.square.draw:"draw"}[victor2]+"", 33)
+            trainThread(self, weightIndex, weightChange, depth, trial + 1, verbose=verbose)
+            return
+
+
 
 class history:
     """Contains a list of previously evaluated positions, to be accessed and used later."""
