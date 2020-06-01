@@ -42,9 +42,36 @@ if __name__ == "__main__":
                     elif (ghost == "cvc"):
                         tempGame.start(agent1 = ai, agent2=ai, useHistory=history)
                 
-                elif (ghost == "debug"):
-                    tempGame = game.game()
-                    tempGame.start(debug=True)
+                elif (ghost == "train"):
+
+                    print("Depth: ", end="", flush=True)
+                    try:
+                        depth = int(input())
+                    except ValueError:
+                        misc.printColor("Input Error")
+                        continue
+                    print("Threads (enter for max): ", end="", flush=True)
+                    try:
+                        threads = (input())
+                        if (threads == ""):
+                            threads = None
+                        else:
+                            threads = int(threads)
+                    except ValueError:
+                        misc.printColor("Input Error")
+                        continue
+                    print("Weight change (enter for .01): ", end="", flush=True)
+                    try:
+                        change = (input())
+                        if (change == ""):
+                            change = .01
+                        else:
+                            threads = float(threads)
+                    except ValueError:
+                        misc.printColor("Input Error")
+                        continue
+                    tempLearning = learning.traditional(depth=depth)
+                    tempLearning.train(change = change, max = threads, verbose=True)
         except KeyboardInterrupt:
             print("\nExiting")
         
